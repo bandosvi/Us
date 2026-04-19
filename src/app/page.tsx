@@ -1,9 +1,5 @@
-import UsQuiz from "@/components/UsQuiz";
+import CouplesQuizApp from "@/components/CouplesQuizApp";
 
 export default function Home() {
-  return (
-    <main style={{ minHeight: "100vh", background: "#070510" }}>
-      <UsQuiz />
-    </main>
-  );
+  return <CouplesQuizApp />;
 }

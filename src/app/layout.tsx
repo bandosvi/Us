@@ -16,8 +16,8 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Us - Couples Quiz",
-  description: "Discover your love languages, attachment styles, and more with your partner",
+  title: "Us - Couples Quiz Suite",
+  description: "Comprehensive relationship quizzes covering love languages, attachment styles, communication, and more",
 };
 
 export default function RootLayout({
