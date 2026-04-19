@@ -4,7 +4,7 @@
 
 **Template Status**: ✅ Ready for development
 
-The application is a Couples Quiz that helps users discover their attachment style in relationships. Built with Next.js 16, TypeScript, and Tailwind CSS 4.
+The application is a comprehensive "Us" Couples Quiz suite with 19 quizzes covering all aspects of relationships. Built with Next.js 16, TypeScript, and dark theme UI.
 
 ## Recently Completed
 
@@ -15,16 +15,20 @@ The application is a Couples Quiz that helps users discover their attachment sty
 - [x] Memory bank documentation
 - [x] Recipe system for common features
 - [x] Professional landing page with hero, features, and CTA sections
-- [x] Couples Quiz - attachment style quiz with 10 questions
-- [x] Results page with scoring across 4 attachment styles (Secure, Anxious, Dismissive, Fearful)
+- [x] Comprehensive Couples Quiz (Us.jsx) with 19 quizzes:
+  - Foundation: Love Languages, Apology Languages, Attachment Style, How You Fight, Communication Style
+  - Deep Dives: What You Carry, Trust & Loyalty, The Hard Questions, The 36 Questions
+  - Growth: Relationship Health, Dreams & Alignment, Financial Compatibility
+  - Fun: This or That, Would You Rather, Never Have I Ever
+  - Daily: Daily Check-In, Weekly Pulse, Gratitude Exchange
 
 ## Current Structure
 
 | File/Directory | Purpose | Status |
 |----------------|---------|--------|
-| `src/app/page.tsx` | Couples Quiz main page | ✅ Ready |
-| `src/components/QuizClient.tsx` | Quiz component with state management | ✅ Ready |
-| `src/lib/quiz-data.ts` | Quiz questions and attachment styles data | ✅ Ready |
+| `src/app/page.tsx` | Us Quiz main page | ✅ Ready |
+| `src/components/UsQuiz.tsx` | Full quiz hub and engine component | ✅ Ready |
+| `src/lib/us-quiz-data.ts` | All 19 quizzes data with questions and answers | ✅ Ready |
 | `src/app/layout.tsx` | Root layout | ✅ Ready |
 | `src/app/globals.css` | Global styles | ✅ Ready |
 | `.kilocode/` | AI context & recipes | ✅ Ready |
@@ -90,4 +94,4 @@ export async function GET() {
 | Date | Changes |
 |------|---------|
 | Initial | Template created with base setup |
-| Recent | Couples Quiz deployed - attachment style assessment with results |
+| Recent | Comprehensive Us.jsx Couples Quiz deployed with 19 quizzes |
