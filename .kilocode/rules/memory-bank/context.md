@@ -4,7 +4,7 @@
 
 **Template Status**: ✅ Ready for development
 
-The template is a clean Next.js 16 starter with TypeScript and Tailwind CSS 4. It includes a professional landing page and is ready for AI-assisted expansion to build any type of application.
+The application is a Couples Quiz that helps users discover their attachment style in relationships. Built with Next.js 16, TypeScript, and Tailwind CSS 4.
 
 ## Recently Completed
 
@@ -15,12 +15,16 @@ The template is a clean Next.js 16 starter with TypeScript and Tailwind CSS 4. I
 - [x] Memory bank documentation
 - [x] Recipe system for common features
 - [x] Professional landing page with hero, features, and CTA sections
+- [x] Couples Quiz - attachment style quiz with 10 questions
+- [x] Results page with scoring across 4 attachment styles (Secure, Anxious, Dismissive, Fearful)
 
 ## Current Structure
 
 | File/Directory | Purpose | Status |
 |----------------|---------|--------|
-| `src/app/page.tsx` | Landing page with hero, features, CTA | ✅ Ready |
+| `src/app/page.tsx` | Couples Quiz main page | ✅ Ready |
+| `src/components/QuizClient.tsx` | Quiz component with state management | ✅ Ready |
+| `src/lib/quiz-data.ts` | Quiz questions and attachment styles data | ✅ Ready |
 | `src/app/layout.tsx` | Root layout | ✅ Ready |
 | `src/app/globals.css` | Global styles | ✅ Ready |
 | `.kilocode/` | AI context & recipes | ✅ Ready |
@@ -86,3 +90,4 @@ export async function GET() {
 | Date | Changes |
 |------|---------|
 | Initial | Template created with base setup |
+| Recent | Couples Quiz deployed - attachment style assessment with results |
