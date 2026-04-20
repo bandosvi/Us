@@ -769,31 +769,1021 @@ function QuizResult({ quiz, result, onBack }: { quiz: any; result: any; onBack: 
   );
 }
 
+// Couple connection types
+interface Couple {
+  code: string;
+  user1id: string;
+  user1name: string;
+  user2id?: string;
+  user2name?: string;
+  created: number;
+}
+
+interface User {
+  userId: string;
+  name: string;
+  code: string;
+  role: "user1" | "user2";
+}
+
+// Generate random ID
+function uid() { return Math.random().toString(36).slice(2, 11); }
+
+// Generate 6-letter code
+function genCode() { return Math.random().toString(36).slice(2, 8).toUpperCase(); }
+
+// Welcome Button Component
+function WelcomeButton({ onClick, label }: { onClick: () => void; label: string }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: "16px 24px",
+        background: CARD,
+        border: `1px solid ${BDR}`,
+        borderRadius: 12,
+        color: "#fff",
+        fontSize: 16,
+        fontWeight: 500,
+        cursor: "pointer",
+        width: "100%"
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+// Hub Section Component
+function HubSection({ title, description, onClick, stats, color }: {
+  title: string;
+  description: string;
+  onClick: () => void;
+  stats: string;
+  color: string;
+}) {
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        background: CARD,
+        border: `1px solid ${BDR}`,
+        borderRadius: 16,
+        padding: 20,
+        cursor: "pointer",
+        borderLeft: `3px solid ${color}`
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 8 }}>
+        <h3 style={{ fontSize: 18, color: "#fff", margin: 0 }}>{title}</h3>
+        <span style={{ color: color, fontSize: 14 }}>›</span>
+      </div>
+      <p style={{ color: "#7a6d8a", fontSize: 14, marginBottom: 8, lineHeight: 1.4 }}>{description}</p>
+      <p style={{ color: "#5a4f6a", fontSize: 12, margin: 0 }}>{stats}</p>
+    </div>
+  );
+}
+
 export default function UsApp() {
-  const [view, setView] = useState<"hub" | "quiz">("hub");
+  const [view, setView] = useState<"welcome" | "create" | "join" | "hub" | "quiz" | "wheel" | "calendar" | "notes" | "boundaries" | "rescue">("welcome");
   const [activeQuiz, setActiveQuiz] = useState<any>(null);
+  const [me, setMe] = useState<User | null>(null);
+  const [couple, setCouple] = useState<Couple | null>(null);
+
+  // Shared data
+  const [cal, setCal] = useState<any[]>([]);
+  const [wheel, setWheel] = useState<string[]>([...DDATES]);
+  const [notes, setNotes] = useState<any[]>([]);
+  const [bounds, setBounds] = useState<any[]>([]);
+  const [rescue, setRescue] = useState<any[]>([]);
+
+  // Form states (all at top level to avoid hook order issues)
+  const [createName, setCreateName] = useState("");
+  const [joinName, setJoinName] = useState("");
+  const [joinCode, setJoinCode] = useState("");
+  const [wheelSpin, setWheelSpin] = useState<string | null>(null);
+  const [newWheelIdea, setNewWheelIdea] = useState("");
+  const [newEventTitle, setNewEventTitle] = useState("");
+  const [newEventDate, setNewEventDate] = useState("");
+  const [newNoteTitle, setNewNoteTitle] = useState("");
+  const [newNoteContent, setNewNoteContent] = useState("");
+  const [newBoundary, setNewBoundary] = useState("");
+  const [newRescueTopic, setNewRescueTopic] = useState("");
+  const [newRescueSide, setNewRescueSide] = useState("");
+
+  // Load saved data on mount
+  useEffect(() => {
+    const savedMe = localStorage.getItem('sess:us');
+    if (savedMe) {
+      const user = JSON.parse(savedMe);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setMe(user);
+
+      // Load couple data
+      const savedCouple = localStorage.getItem(`couple:${user.code}`);
+      if (savedCouple) {
+        setCouple(JSON.parse(savedCouple));
+      }
+
+      // Load shared data using couple code
+      const code = user.code;
+      const savedCal = localStorage.getItem(`cal:${code}`);
+      const savedWheel = localStorage.getItem(`whl:${code}`);
+      const savedNotes = localStorage.getItem(`nts:${code}`);
+      const savedBounds = localStorage.getItem(`bnd:${code}`);
+      const savedRescue = localStorage.getItem(`rsc:${code}`);
+
+      if (savedCal) setCal(JSON.parse(savedCal));
+      if (savedWheel) setWheel(JSON.parse(savedWheel));
+      else setWheel([...DDATES]); // Default to DDATES if no saved wheel
+      if (savedNotes) setNotes(JSON.parse(savedNotes));
+      if (savedBounds) setBounds(JSON.parse(savedBounds));
+      if (savedRescue) setRescue(JSON.parse(savedRescue));
+    } else {
+      // If no saved user, reset to welcome screen
+      setView("welcome");
+    }
+  }, []);  
+
+  // Save data when state changes
+  useEffect(() => {
+    if (me) {
+      localStorage.setItem('sess:us', JSON.stringify(me));
+      if (couple) {
+        localStorage.setItem(`couple:${me.code}`, JSON.stringify(couple));
+      }
+      // Save shared data using couple code
+      if (me.code) {
+        localStorage.setItem(`cal:${me.code}`, JSON.stringify(cal));
+        localStorage.setItem(`whl:${me.code}`, JSON.stringify(wheel));
+        localStorage.setItem(`nts:${me.code}`, JSON.stringify(notes));
+        localStorage.setItem(`bnd:${me.code}`, JSON.stringify(bounds));
+        localStorage.setItem(`rsc:${me.code}`, JSON.stringify(rescue));
+      }
+    }
+  }, [me, couple, cal, wheel, notes, bounds, rescue]);
+
+  const createCouple = (name: string) => {
+    const code = genCode();
+    const userId = uid();
+    const newCouple: Couple = {
+      code,
+      user1id: userId,
+      user1name: name,
+      created: Date.now()
+    };
+    const newUser: User = { userId, name, code, role: "user1" };
+
+    setMe(newUser);
+    setCouple(newCouple);
+    setCreateName(""); // Clear form
+    setView("hub");
+  };
+
+  const joinCouple = (name: string, code: string) => {
+    const existingCouple = localStorage.getItem(`couple:${code}`);
+    if (!existingCouple) {
+      alert("Code not found.");
+      return false;
+    }
+
+    const coupleData = JSON.parse(existingCouple);
+    if (coupleData.user2id) {
+      alert("This couple already has two people.");
+      return false;
+    }
+
+    const userId = uid();
+    coupleData.user2id = userId;
+    coupleData.user2name = name;
+
+    const newUser: User = { userId, name, code, role: "user2" };
+
+    setMe(newUser);
+    setCouple(coupleData);
+    localStorage.setItem(`couple:${code}`, JSON.stringify(coupleData));
+    setJoinName(""); // Clear form
+    setJoinCode(""); // Clear form
+    setView("hub");
+    return true;
+  };
 
   const handleSelectQuiz = (quiz: any) => {
     setActiveQuiz(quiz);
     setView("quiz");
   };
 
+  const addToWheel = (idea: string) => {
+    if (idea.trim()) {
+      setWheel(prev => [...prev, idea.trim()]);
+    }
+  };
+
+  const spinWheel = () => {
+    if (wheel.length === 0) return null;
+    const winner = wheel[Math.floor(Math.random() * wheel.length)];
+    return winner;
+  };
+
+  const addEvent = (title: string, date: string) => {
+    const newEvent = {
+      id: uid(),
+      title: title.trim(),
+      date,
+      type: "date",
+      createdBy: me?.name || "Unknown"
+    };
+    setCal(prev => [newEvent, ...prev]);
+  };
+
+  const addNote = (title: string, content: string) => {
+    const newNote = {
+      id: uid(),
+      title: title.trim(),
+      content: content.trim(),
+      author: me?.name || "Unknown",
+      shared: true,
+      updated: Date.now()
+    };
+    setNotes(prev => [newNote, ...prev]);
+  };
+
+  const addBoundary = (text: string, category: string = "emotional") => {
+    const newBoundary = {
+      id: uid(),
+      text: text.trim(),
+      cat: category,
+      by: me?.name || "Unknown",
+      added: Date.now()
+    };
+    setBounds(prev => [newBoundary, ...prev]);
+  };
+
+  const addRescueCase = (topic: string, side: string) => {
+    const newCase = {
+      id: uid(),
+      topic: topic.trim(),
+      side1: me?.role === "user1" ? { name: me?.name || "", text: side } : null,
+      side2: me?.role === "user2" ? { name: me?.name || "", text: side } : null,
+      verdict: null
+    };
+    setRescue(prev => [newCase, ...prev]);
+  };
+
+  // Welcome screen
+  if (view === "welcome") {
+    return (
+      <div style={{ minHeight: "100vh", background: DARK, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+        <div style={{ textAlign: "center", maxWidth: 400 }}>
+          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 48, color: A, fontStyle: "italic", fontWeight: 600, marginBottom: 16 }}>
+            us.
+          </h1>
+          <p style={{ color: "#7a6d8a", fontSize: 16, marginBottom: 32 }}>
+            A private sanctuary built for two.<br />
+            17 quizzes. Shared tools. Everything to grow closer.
+          </p>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <WelcomeButton onClick={() => setView("create")} label="Start a new couple" />
+            <WelcomeButton onClick={() => setView("join")} label="Join with partner's code" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Create couple screen
+  if (view === "create") {
+    return (
+      <div style={{ minHeight: "100vh", background: DARK, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+        <div style={{ background: CARD, border: `1px solid ${BDR}`, borderRadius: 16, padding: 32, maxWidth: 400, width: "100%" }}>
+          <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: A, fontStyle: "italic", fontWeight: 600, marginBottom: 8 }}>
+            Start Your Journey
+          </h2>
+          <p style={{ color: "#7a6d8a", fontSize: 14, marginBottom: 20 }}>
+            Create a couple and get a 6-letter code to share with your partner.
+          </p>
+          <input
+            type="text"
+            placeholder="Your name"
+            value={createName}
+            onChange={(e) => setCreateName(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "12px 16px",
+              background: SURF,
+              border: `1px solid ${BDR}`,
+              borderRadius: 8,
+              color: "#fff",
+              fontSize: 16,
+              marginBottom: 20
+            }}
+          />
+          <div style={{ display: "flex", gap: 12 }}>
+            <button
+              onClick={() => createName.trim() && createCouple(createName.trim())}
+              style={{
+                flex: 1,
+                padding: "12px",
+                background: A,
+                border: "none",
+                borderRadius: 8,
+                color: DARK,
+                fontSize: 16,
+                fontWeight: 600,
+                cursor: "pointer"
+              }}
+            >
+              Create Couple
+            </button>
+            <button
+              onClick={() => setView("welcome")}
+              style={{
+                flex: 1,
+                padding: "12px",
+                background: "transparent",
+                border: `1px solid ${BDR}`,
+                borderRadius: 8,
+                color: "#7a6d8a",
+                fontSize: 16,
+                cursor: "pointer"
+              }}
+            >
+              Back
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Join couple screen
+  if (view === "join") {
+    return (
+      <div style={{ minHeight: "100vh", background: DARK, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+        <div style={{ background: CARD, border: `1px solid ${BDR}`, borderRadius: 16, padding: 32, maxWidth: 400, width: "100%" }}>
+          <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: A, fontStyle: "italic", fontWeight: 600, marginBottom: 8 }}>
+            Join Your Partner
+          </h2>
+          <p style={{ color: "#7a6d8a", fontSize: 14, marginBottom: 20 }}>
+            Enter your partner&apos;s 6-letter code to connect your accounts.
+          </p>
+          <input
+            type="text"
+            placeholder="Your name"
+            value={joinName}
+            onChange={(e) => setJoinName(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "12px 16px",
+              background: SURF,
+              border: `1px solid ${BDR}`,
+              borderRadius: 8,
+              color: "#fff",
+              fontSize: 16,
+              marginBottom: 12
+            }}
+          />
+          <input
+            type="text"
+            placeholder="6-letter code"
+            value={joinCode}
+            onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+            maxLength={6}
+            style={{
+              width: "100%",
+              padding: "12px 16px",
+              background: SURF,
+              border: `1px solid ${BDR}`,
+              borderRadius: 8,
+              color: "#fff",
+              fontSize: 16,
+              marginBottom: 20,
+              fontFamily: "monospace"
+            }}
+          />
+          <div style={{ display: "flex", gap: 12 }}>
+            <button
+              onClick={() => joinName.trim() && joinCode.trim() && joinCouple(joinName.trim(), joinCode.trim())}
+              style={{
+                flex: 1,
+                padding: "12px",
+                background: A,
+                border: "none",
+                borderRadius: 8,
+                color: DARK,
+                fontSize: 16,
+                fontWeight: 600,
+                cursor: "pointer"
+              }}
+            >
+              Join Couple
+            </button>
+            <button
+              onClick={() => setView("welcome")}
+              style={{
+                flex: 1,
+                padding: "12px",
+                background: "transparent",
+                border: `1px solid ${BDR}`,
+                borderRadius: 8,
+                color: "#7a6d8a",
+                fontSize: 16,
+                cursor: "pointer"
+              }}
+            >
+              Back
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Quiz view
   if (view === "quiz" && activeQuiz) {
     return <QuizEngine quiz={activeQuiz} onBack={() => setView("hub")} />;
   }
 
+  // Date Wheel view
+  if (view === "wheel") {
+    return (
+      <div style={{ minHeight: "100vh", background: DARK }}>
+        <div style={{ padding: "16px 16px 0" }}>
+          <button
+            onClick={() => setView("hub")}
+            style={{
+              padding: "8px 16px",
+              background: "transparent",
+              border: `1px solid ${BDR}`,
+              borderRadius: 20,
+              color: "#7a6d8a",
+              fontSize: 14,
+              cursor: "pointer",
+              marginBottom: 16
+            }}
+          >
+            ← Back
+          </button>
+          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: A, fontStyle: "italic", fontWeight: 600, marginBottom: 8 }}>
+            Date Wheel
+          </h1>
+          <p style={{ color: "#7a6d8a", fontSize: 14, marginBottom: 20 }}>
+            {wheel.length} date ideas ready to spin
+          </p>
+        </div>
+
+        <div style={{ padding: "0 16px 80px" }}>
+          <div style={{ background: CARD, border: `1px solid ${BDR}`, borderRadius: 16, padding: 32, textAlign: "center", marginBottom: 20 }}>
+            <div style={{ fontSize: 64, marginBottom: 20 }}>🎡</div>
+            <button
+              onClick={() => {
+                const result = spinWheel();
+                if (result) setWheelSpin(result);
+              }}
+              style={{
+                padding: "16px 32px",
+                background: A,
+                border: "none",
+                borderRadius: 12,
+                color: DARK,
+                fontSize: 18,
+                fontWeight: 600,
+                cursor: "pointer",
+                marginBottom: 20
+              }}
+            >
+              Spin the Wheel
+            </button>
+            {wheelSpin && (
+              <div>
+                <div style={{ fontSize: 24, color: A, marginBottom: 8 }}>Your date idea:</div>
+                <div style={{ fontSize: 18, color: "#fff" }}>{wheelSpin}</div>
+              </div>
+            )}
+          </div>
+
+          <div style={{ background: CARD, border: `1px solid ${BDR}`, borderRadius: 16, padding: 20, marginBottom: 20 }}>
+            <h3 style={{ fontSize: 16, color: "#fff", marginBottom: 12 }}>Add New Idea</h3>
+            <input
+              type="text"
+              placeholder="New date idea..."
+              value={newWheelIdea}
+              onChange={(e) => setNewWheelIdea(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "12px 16px",
+                background: SURF,
+                border: `1px solid ${BDR}`,
+                borderRadius: 8,
+                color: "#fff",
+                fontSize: 16,
+                marginBottom: 12
+              }}
+            />
+            <button
+              onClick={() => {
+                if (newWheelIdea.trim()) {
+                  addToWheel(newWheelIdea.trim());
+                  setNewWheelIdea("");
+                }
+              }}
+              style={{
+                width: "100%",
+                padding: "12px",
+                background: A,
+                border: "none",
+                borderRadius: 8,
+                color: DARK,
+                fontSize: 16,
+                fontWeight: 600,
+                cursor: "pointer"
+              }}
+            >
+              Add Idea
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Calendar view
+  if (view === "calendar") {
+    return (
+      <div style={{ minHeight: "100vh", background: DARK }}>
+        <div style={{ padding: "16px 16px 0" }}>
+          <button
+            onClick={() => setView("hub")}
+            style={{
+              padding: "8px 16px",
+              background: "transparent",
+              border: `1px solid ${BDR}`,
+              borderRadius: 20,
+              color: "#7a6d8a",
+              fontSize: 14,
+              cursor: "pointer",
+              marginBottom: 16
+            }}
+          >
+            ← Back
+          </button>
+          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: A, fontStyle: "italic", fontWeight: 600, marginBottom: 8 }}>
+            Our Calendar
+          </h1>
+          <p style={{ color: "#7a6d8a", fontSize: 14, marginBottom: 20 }}>
+            {cal.length} upcoming events
+          </p>
+        </div>
+
+        <div style={{ padding: "0 16px 80px" }}>
+          <div style={{ background: CARD, border: `1px solid ${BDR}`, borderRadius: 16, padding: 20, marginBottom: 20 }}>
+            <h3 style={{ fontSize: 16, color: "#fff", marginBottom: 12 }}>Add New Event</h3>
+            <input
+              type="text"
+              placeholder="Event title"
+              value={newEventTitle}
+              onChange={(e) => setNewEventTitle(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "12px 16px",
+                background: SURF,
+                border: `1px solid ${BDR}`,
+                borderRadius: 8,
+                color: "#fff",
+                fontSize: 16,
+                marginBottom: 12
+              }}
+            />
+            <input
+              type="date"
+              value={newEventDate}
+              onChange={(e) => setNewEventDate(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "12px 16px",
+                background: SURF,
+                border: `1px solid ${BDR}`,
+                borderRadius: 8,
+                color: "#fff",
+                fontSize: 16,
+                marginBottom: 12
+              }}
+            />
+            <button
+              onClick={() => {
+                if (newEventTitle.trim() && newEventDate) {
+                  addEvent(newEventTitle.trim(), newEventDate);
+                  setNewEventTitle("");
+                  setNewEventDate("");
+                }
+              }}
+              style={{
+                width: "100%",
+                padding: "12px",
+                background: A,
+                border: "none",
+                borderRadius: 8,
+                color: DARK,
+                fontSize: 16,
+                fontWeight: 600,
+                cursor: "pointer"
+              }}
+            >
+              Add Event
+            </button>
+          </div>
+
+          <div style={{ display: "grid", gap: 12 }}>
+            {cal.map((event: any) => (
+              <div key={event.id} style={{ background: CARD, border: `1px solid ${BDR}`, borderRadius: 12, padding: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
+                  <div>
+                    <div style={{ fontSize: 16, color: "#fff", marginBottom: 4 }}>{event.title}</div>
+                    <div style={{ fontSize: 14, color: A }}>{event.date}</div>
+                  </div>
+                  <div style={{ fontSize: 12, color: "#7a6d8a" }}>by {event.createdBy}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Notes view
+  if (view === "notes") {
+    return (
+      <div style={{ minHeight: "100vh", background: DARK }}>
+        <div style={{ padding: "16px 16px 0" }}>
+          <button
+            onClick={() => setView("hub")}
+            style={{
+              padding: "8px 16px",
+              background: "transparent",
+              border: `1px solid ${BDR}`,
+              borderRadius: 20,
+              color: "#7a6d8a",
+              fontSize: 14,
+              cursor: "pointer",
+              marginBottom: 16
+            }}
+          >
+            ← Back
+          </button>
+          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: A, fontStyle: "italic", fontWeight: 600, marginBottom: 8 }}>
+            Notes
+          </h1>
+          <p style={{ color: "#7a6d8a", fontSize: 14, marginBottom: 20 }}>
+            {notes.length} shared notes
+          </p>
+        </div>
+
+        <div style={{ padding: "0 16px 80px" }}>
+          <div style={{ background: CARD, border: `1px solid ${BDR}`, borderRadius: 16, padding: 20, marginBottom: 20 }}>
+            <h3 style={{ fontSize: 16, color: "#fff", marginBottom: 12 }}>Add New Note</h3>
+            <input
+              type="text"
+              placeholder="Note title"
+              value={newNoteTitle}
+              onChange={(e) => setNewNoteTitle(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "12px 16px",
+                background: SURF,
+                border: `1px solid ${BDR}`,
+                borderRadius: 8,
+                color: "#fff",
+                fontSize: 16,
+                marginBottom: 12
+              }}
+            />
+            <textarea
+              placeholder="Note content..."
+              value={newNoteContent}
+              onChange={(e) => setNewNoteContent(e.target.value)}
+              rows={4}
+              style={{
+                width: "100%",
+                padding: "12px 16px",
+                background: SURF,
+                border: `1px solid ${BDR}`,
+                borderRadius: 8,
+                color: "#fff",
+                fontSize: 16,
+                marginBottom: 12,
+                resize: "vertical"
+              }}
+            />
+            <button
+              onClick={() => {
+                if (newNoteTitle.trim() && newNoteContent.trim()) {
+                  addNote(newNoteTitle.trim(), newNoteContent.trim());
+                  setNewNoteTitle("");
+                  setNewNoteContent("");
+                }
+              }}
+              style={{
+                width: "100%",
+                padding: "12px",
+                background: A,
+                border: "none",
+                borderRadius: 8,
+                color: DARK,
+                fontSize: 16,
+                fontWeight: 600,
+                cursor: "pointer"
+              }}
+            >
+              Save Note
+            </button>
+          </div>
+
+          <div style={{ display: "grid", gap: 12 }}>
+            {notes.map((note: any) => (
+              <div key={note.id} style={{ background: CARD, border: `1px solid ${BDR}`, borderRadius: 12, padding: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 8 }}>
+                  <div style={{ fontSize: 16, color: "#fff" }}>{note.title}</div>
+                  <div style={{ fontSize: 12, color: "#7a6d8a" }}>by {note.author}</div>
+                </div>
+                <div style={{ fontSize: 14, color: "#c8c0d8", lineHeight: 1.5 }}>{note.content}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Boundaries view
+  if (view === "boundaries") {
+    return (
+      <div style={{ minHeight: "100vh", background: DARK }}>
+        <div style={{ padding: "16px 16px 0" }}>
+          <button
+            onClick={() => setView("hub")}
+            style={{
+              padding: "8px 16px",
+              background: "transparent",
+              border: `1px solid ${BDR}`,
+              borderRadius: 20,
+              color: "#7a6d8a",
+              fontSize: 14,
+              cursor: "pointer",
+              marginBottom: 16
+            }}
+          >
+            ← Back
+          </button>
+          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: A, fontStyle: "italic", fontWeight: 600, marginBottom: 8 }}>
+            Boundary Wall
+          </h1>
+          <p style={{ color: "#7a6d8a", fontSize: 14, marginBottom: 20 }}>
+            {bounds.length} boundaries set
+          </p>
+        </div>
+
+        <div style={{ padding: "0 16px 80px" }}>
+          <div style={{ background: CARD, border: `1px solid ${BDR}`, borderRadius: 16, padding: 20, marginBottom: 20 }}>
+            <h3 style={{ fontSize: 16, color: "#fff", marginBottom: 12 }}>Add New Boundary</h3>
+            <textarea
+              placeholder="Describe a boundary you'd like to set..."
+              value={newBoundary}
+              onChange={(e) => setNewBoundary(e.target.value)}
+              rows={3}
+              style={{
+                width: "100%",
+                padding: "12px 16px",
+                background: SURF,
+                border: `1px solid ${BDR}`,
+                borderRadius: 8,
+                color: "#fff",
+                fontSize: 16,
+                marginBottom: 12,
+                resize: "vertical"
+              }}
+            />
+            <button
+              onClick={() => {
+                if (newBoundary.trim()) {
+                  addBoundary(newBoundary.trim());
+                  setNewBoundary("");
+                }
+              }}
+              style={{
+                width: "100%",
+                padding: "12px",
+                background: A,
+                border: "none",
+                borderRadius: 8,
+                color: DARK,
+                fontSize: 16,
+                fontWeight: 600,
+                cursor: "pointer"
+              }}
+            >
+              Add Boundary
+            </button>
+          </div>
+
+          <div style={{ display: "grid", gap: 12 }}>
+            {bounds.map((boundary: any) => (
+              <div key={boundary.id} style={{ background: CARD, border: `1px solid ${BDR}`, borderRadius: 12, padding: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 8 }}>
+                  <div style={{ fontSize: 14, color: "#fff" }}>{boundary.text}</div>
+                  <div style={{ fontSize: 12, color: "#7a6d8a" }}>by {boundary.by}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Dr. Rescue view
+  if (view === "rescue") {
+    return (
+      <div style={{ minHeight: "100vh", background: DARK }}>
+        <div style={{ padding: "16px 16px 0" }}>
+          <button
+            onClick={() => setView("hub")}
+            style={{
+              padding: "8px 16px",
+              background: "transparent",
+              border: `1px solid ${BDR}`,
+              borderRadius: 20,
+              color: "#7a6d8a",
+              fontSize: 14,
+              cursor: "pointer",
+              marginBottom: 16
+            }}
+          >
+            ← Back
+          </button>
+          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: A, fontStyle: "italic", fontWeight: 600, marginBottom: 8 }}>
+            Dr. Rescue
+          </h1>
+          <p style={{ color: "#7a6d8a", fontSize: 14, marginBottom: 20 }}>
+            Conflict mediator • {rescue.length} cases
+          </p>
+        </div>
+
+        <div style={{ padding: "0 16px 80px" }}>
+          <div style={{ background: CARD, border: `1px solid ${BDR}`, borderRadius: 16, padding: 20, marginBottom: 20 }}>
+            <h3 style={{ fontSize: 16, color: "#fff", marginBottom: 12 }}>Open New Case</h3>
+            <input
+              type="text"
+              placeholder="What's the conflict about?"
+              value={newRescueTopic}
+              onChange={(e) => setNewRescueTopic(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "12px 16px",
+                background: SURF,
+                border: `1px solid ${BDR}`,
+                borderRadius: 8,
+                color: "#fff",
+                fontSize: 16,
+                marginBottom: 12
+              }}
+            />
+            <textarea
+              placeholder={`Your side (${me?.name}):`}
+              value={newRescueSide}
+              onChange={(e) => setNewRescueSide(e.target.value)}
+              rows={3}
+              style={{
+                width: "100%",
+                padding: "12px 16px",
+                background: SURF,
+                border: `1px solid ${BDR}`,
+                borderRadius: 8,
+                color: "#fff",
+                fontSize: 16,
+                marginBottom: 12,
+                resize: "vertical"
+              }}
+            />
+            <button
+              onClick={() => {
+                if (newRescueTopic.trim() && newRescueSide.trim()) {
+                  addRescueCase(newRescueTopic.trim(), newRescueSide.trim());
+                  setNewRescueTopic("");
+                  setNewRescueSide("");
+                }
+              }}
+              style={{
+                width: "100%",
+                padding: "12px",
+                background: A,
+                border: "none",
+                borderRadius: 8,
+                color: DARK,
+                fontSize: 16,
+                fontWeight: 600,
+                cursor: "pointer"
+              }}
+            >
+              Open Case
+            </button>
+          </div>
+
+          <div style={{ display: "grid", gap: 12 }}>
+            {rescue.map((case_: any) => (
+              <div key={case_.id} style={{ background: CARD, border: `1px solid ${BDR}`, borderRadius: 12, padding: 16 }}>
+                <div style={{ fontSize: 16, color: "#fff", marginBottom: 8 }}>{case_.topic}</div>
+                {case_.side1 && (
+                  <div style={{ fontSize: 14, color: "#c8c0d8", marginBottom: 8 }}>
+                    <strong>{case_.side1.name}:</strong> {case_.side1.text}
+                  </div>
+                )}
+                {case_.side2 && (
+                  <div style={{ fontSize: 14, color: "#c8c0d8", marginBottom: 8 }}>
+                    <strong>{case_.side2.name}:</strong> {case_.side2.text}
+                  </div>
+                )}
+                {case_.verdict && (
+                  <div style={{ fontSize: 14, color: A, marginTop: 12, padding: 12, background: SURF, borderRadius: 8 }}>
+                    <strong>Dr. Rescue says:</strong> {case_.verdict}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Main hub
   return (
     <div style={{ minHeight: "100vh", background: DARK }}>
       <div style={{ padding: "16px 16px 0" }}>
         <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 36, color: A, fontStyle: "italic", fontWeight: 600, marginBottom: 8 }}>
           us.
         </h1>
-        <p style={{ color: "#4a3f5a", fontSize: 14, marginBottom: 20 }}>
-          A private sanctuary built for two.<br />
-          17 quizzes. Shared tools. Everything to grow closer.
+        <p style={{ color: "#4a3f5a", fontSize: 14, marginBottom: 12 }}>
+          Hello, {me?.name} • Code: {me?.code}
         </p>
+        {couple?.user2name ? (
+          <p style={{ color: "#4a3f5a", fontSize: 14, marginBottom: 20 }}>
+            Partner: {couple.user2name}
+          </p>
+        ) : (
+          <p style={{ color: "#7a6d8a", fontSize: 14, marginBottom: 20 }}>
+            Waiting for your partner to join...
+          </p>
+        )}
       </div>
-      <QuizHub onSelectQuiz={handleSelectQuiz} />
+
+      <div style={{ padding: "0 16px 80px" }}>
+        <div style={{ display: "grid", gap: 16 }}>
+          <HubSection
+            title="Quiz Studio"
+            description="17 quizzes. The most honest thing you'll do together."
+            onClick={() => setView("quiz")}
+            stats={`${17} quizzes • 0 completed`}
+            color={A}
+          />
+          <HubSection
+            title="Date Wheel"
+            description="Spin the wheel to pick your next adventure"
+            onClick={() => setView("wheel")}
+            stats={`${wheel.length} ideas`}
+            color={GOLD}
+          />
+          <HubSection
+            title="Calendar"
+            description="Plan dates and remember important moments"
+            onClick={() => setView("calendar")}
+            stats={`${cal.length} events`}
+            color={TEAL}
+          />
+          <HubSection
+            title="Notes"
+            description="Share thoughts, dreams, and memories"
+            onClick={() => setView("notes")}
+            stats={`${notes.length} notes`}
+            color="#9b7fa8"
+          />
+          <HubSection
+            title="Boundaries"
+            description="Set and respect each other's limits"
+            onClick={() => setView("boundaries")}
+            stats={`${bounds.length} boundaries`}
+            color="#7fcfcf"
+          />
+          <HubSection
+            title="Dr. Rescue"
+            description="AI-powered conflict mediator"
+            onClick={() => setView("rescue")}
+            stats={`${rescue.length} cases`}
+            color="#e87c7c"
+          />
+        </div>
+      </div>
     </div>
   );
 }
